@@ -87,7 +87,8 @@ srpm:
 
 	# Generate spec file
 	@echo "=== Generating spec file ==="
-	@( \
+	@PHP_VER=$$(php-config --version); \
+	( \
 	echo '# we dont want -z defs linker flag'; \
 	echo '%undefine _strict_symbol_defs_build'; \
 	echo ''; \
