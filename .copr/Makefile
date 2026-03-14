@@ -46,7 +46,7 @@ srpm:
 		echo "Installing missing build tools..."; \
 		dnf install -y git golang cmake ninja-build gcc gcc-c++ \
 			autoconf automake libtool python3 make \
-			zlib-devel || exit 1; \
+			zlib-devel php-devel || exit 1; \
 	else \
 		echo "Build tools already available"; \
 	fi
