@@ -46,7 +46,7 @@ srpm:
 		echo "Installing missing build tools..."; \
 		dnf install -y git golang cmake ninja-build gcc gcc-c++ \
 			autoconf automake libtool python3 make \
-			zlib-devel php-devel || exit 1; \
+			zlib-devel || exit 1; \
 	else \
 		echo "Build tools already available"; \
 	fi
@@ -97,7 +97,7 @@ srpm:
 	echo ''; \
 	echo 'Name:           php-%{pecl_name}'; \
 	echo 'Version:        $(EXT_VERSION)'; \
-	echo 'Release:        1.php%{php_version}%{?dist}'; \
+	echo 'Release:        1%{?dist}'; \
 	echo 'Summary:        Browser TLS/HTTP2 fingerprint impersonation for PHP'; \
 	echo ''; \
 	echo 'License:        MIT'; \
