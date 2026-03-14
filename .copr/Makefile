@@ -16,6 +16,7 @@ EXT_VERSION := $(shell curl -s https://api.github.com/repos/DigitalCyberSoft/php
 CURL_IMP_VERSION := $(shell curl -s https://api.github.com/repos/lwthiker/curl-impersonate/releases/latest | sed -n 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/p')
 
 EXT_URL = https://github.com/DigitalCyberSoft/php-curl-cffi/archive/refs/tags/v$(EXT_VERSION).tar.gz
+RELEASE := $(shell cat $(CURDIR)/release 2>/dev/null || echo 1)
 
 # Default target for COPR
 srpm:
@@ -97,7 +98,7 @@ srpm:
 	echo ''; \
 	echo 'Name:           php-%{pecl_name}'; \
 	echo 'Version:        $(EXT_VERSION)'; \
-	echo 'Release:        1%{?dist}'; \
+	echo 'Release:        $(RELEASE)%{?dist}'; \
 	echo 'Summary:        Browser TLS/HTTP2 fingerprint impersonation for PHP'; \
 	echo ''; \
 	echo 'License:        MIT'; \

@@ -147,6 +147,20 @@ ENTRY
 FOOTER
 }
 
+# Bump the release counter
+bump_release() {
+    local release_file="$SCRIPT_DIR/release"
+    local current=1
+
+    if [ -f "$release_file" ]; then
+        current=$(cat "$release_file" | tr -d '[:space:]')
+        current=$((current + 1))
+    fi
+
+    echo "$current" > "$release_file"
+    echo "  Release bumped to: $current"
+}
+
 # Commit and push changes
 commit_and_push() {
     local changes="$1"
@@ -158,7 +172,7 @@ commit_and_push() {
         git config user.email "bot@github-actions"
     fi
 
-    git add php_version.json
+    git add php_version.json release
 
     local commit_msg="Auto-update: PHP version change detected
 
@@ -225,6 +239,9 @@ if [ $VERSIONS_CHANGED -eq 1 ]; then
             echo "Updating php_version.json..."
             write_versions
             echo "php_version.json updated"
+
+            echo "Bumping release counter..."
+            bump_release
 
             echo "Committing and pushing..."
             commit_and_push "$(echo -e "$CHANGE_SUMMARY")"
