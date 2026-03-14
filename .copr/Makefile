@@ -87,8 +87,7 @@ srpm:
 
 	# Generate spec file
 	@echo "=== Generating spec file ==="
-	@PHP_VER=$$(php-config --version); \
-	( \
+	@( \
 	echo '# we dont want -z defs linker flag'; \
 	echo '%undefine _strict_symbol_defs_build'; \
 	echo ''; \
@@ -98,7 +97,7 @@ srpm:
 	echo ''; \
 	echo 'Name:           php-%{pecl_name}'; \
 	echo 'Version:        $(EXT_VERSION)'; \
-	echo 'Release:        1.php%{php_major_version}%{php_minor_version}%{?dist}'; \
+	echo 'Release:        1.php%{php_version}%{?dist}'; \
 	echo 'Summary:        Browser TLS/HTTP2 fingerprint impersonation for PHP'; \
 	echo ''; \
 	echo 'License:        MIT'; \
