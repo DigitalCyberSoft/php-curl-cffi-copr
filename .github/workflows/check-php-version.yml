@@ -1,0 +1,24 @@
+name: Check PHP Version
+
+on:
+  schedule:
+    # Every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for PHP version changes
+        id: check
+        run: ./check_php_version.sh --check-only || echo "changes=true" >> "$GITHUB_OUTPUT"
+
+      - name: Update and push
+        if: steps.check.outputs.changes == 'true'
+        run: |
+          git config user.name "PHP Version Checker"
+          git config user.email "bot@github-actions"
+          ./check_php_version.sh --update

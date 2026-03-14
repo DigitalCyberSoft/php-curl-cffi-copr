@@ -1,0 +1,17 @@
+{
+  "php_versions": {
+    "f41": {
+      "version": "8.3.27",
+      "zendver": "20230831"
+    },
+    "f42": {
+      "version": "8.4.19",
+      "zendver": "20240924"
+    },
+    "rawhide": {
+      "version": "8.5.4",
+      "zendver": "20250925"
+    }
+  },
+  "last_checked": "2026-03-14T12:23:38Z"
+}
