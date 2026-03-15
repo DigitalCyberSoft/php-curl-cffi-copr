@@ -56,13 +56,23 @@ srpm:
 	@cd curl-impersonate && \
 	BSSL_COMMIT=$$(sed -n 's/^BORING_SSL_COMMIT := //p' Makefile.in); \
 	CURL_VER=$$(sed -n 's/^CURL_VERSION := //p' Makefile.in); \
+	NGTCP2_URL=$$(sed -n 's/^NGTCP2_URL := //p' Makefile.in); \
+	NGTCP2_VER=$$(sed -n 's/^NGTCP2_VERSION := //p' Makefile.in); \
+	NGHTTP3_URL=$$(sed -n 's/^NGHTTP3_URL := //p' Makefile.in); \
+	NGHTTP3_VER=$$(sed -n 's/^NGHTTP3_VERSION := //p' Makefile.in); \
 	echo "  BoringSSL: $$BSSL_COMMIT"; \
 	echo "  curl: $$CURL_VER"; \
+	echo "  ngtcp2: $$NGTCP2_VER"; \
+	echo "  nghttp3: $$NGHTTP3_VER"; \
 	curl -fL -o "boringssl-$$BSSL_COMMIT.zip" \
 		"https://github.com/google/boringssl/archive/$$BSSL_COMMIT.zip" || exit 1; \
 	curl -fL -o "$$CURL_VER.tar.gz" \
 		"https://github.com/curl/curl/archive/$$CURL_VER.tar.gz" || exit 1; \
-	echo "  Dependencies downloaded (brotli, nghttp2, zstd etc. use system packages)"
+	curl -fL -o "ngtcp2-$$NGTCP2_VER.tar.bz2" \
+		"$$NGTCP2_URL" || exit 1; \
+	curl -fL -o "nghttp3-$$NGHTTP3_VER.tar.bz2" \
+		"$$NGHTTP3_URL" || exit 1; \
+	echo "  Dependencies downloaded (brotli, nghttp2, zstd, idn2 use system packages)"
 
 	# Create curl-impersonate source tarball (with pre-fetched deps, exclude .git)
 	@echo "=== Packaging curl-impersonate source ==="
@@ -153,40 +163,47 @@ srpm:
 	echo ''; \
 	echo '%build'; \
 	echo '# Build curl-impersonate from bundled source'; \
-	echo '# Only BoringSSL and curl are built from source; brotli and nghttp2 use system packages'; \
+	echo '# BoringSSL, ngtcp2, nghttp3 and curl built from source; other deps use system packages'; \
 	echo 'CURL_IMP_DIR=$$(pwd)/curl-impersonate'; \
 	echo 'cd "$$CURL_IMP_DIR"'; \
 	echo 'mkdir -p build && cd build'; \
 	echo '# Copy pre-fetched dependency archives so make does not try to download'; \
 	echo 'cp ../*.tar.gz ../*.tar.bz2 ../*.tar.xz ../*.zip . 2>/dev/null || :'; \
 	echo '../configure --prefix=$$(pwd)/dist'; \
-	echo '# Patch Makefile to use system libs instead of building from source'; \
-	echo '# Only BoringSSL needs to be built (it requires specific patches for impersonation)'; \
-	echo 'sed -i '"'"'s|^chrome_libs := .*|chrome_libs := $$(boringssl_static_libs)|'"'"' Makefile'; \
+	echo '# Patch Makefile to use system libs where possible'; \
+	echo '# Use system libs for brotli, nghttp2, zstd, zlib, idn2'; \
+	echo '# Build BoringSSL, ngtcp2, nghttp3 from source (need custom BoringSSL for QUIC)'; \
+	echo 'sed -i '"'"'s|^chrome_libs := .*|chrome_libs := $$(boringssl_static_libs) $$(ngtcp2_static_libs) $$(nghttp3_static_libs)|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-nghttp2=$$(nghttp2_install_dir)|--with-nghttp2|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-brotli=$$(brotli_install_dir)|--with-brotli|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-zstd=$$(zstd_install_dir)|--with-zstd|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-zlib=$$(zlib_install_dir)|--with-zlib|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-libidn2=$$(libidn2_install_dir)|--with-libidn2|'"'"' Makefile'; \
-	echo '# Disable HTTP/3 (ngtcp2/nghttp3 require BoringSSL-linked builds, not available as system pkgs)'; \
-	echo 'sed -i '"'"'s|--with-nghttp3=$$(nghttp3_install_dir)||'"'"' Makefile'; \
-	echo 'sed -i '"'"'s|--with-ngtcp2=$$(ngtcp2_install_dir)||'"'"' Makefile'; \
 	echo 'make build'; \
 	echo 'make install'; \
 	echo 'cd ../../'; \
 	echo ''; \
-	echo '# Find the built static library'; \
+	echo '# Find the built static libraries'; \
 	echo 'STATIC_LIB=$$(find "$$CURL_IMP_DIR" -name "libcurl-impersonate*.a" -type f | head -1)'; \
+	echo 'NGTCP2_LIB=$$(find "$$CURL_IMP_DIR" -name "libngtcp2.a" -type f | head -1)'; \
+	echo 'NGHTTP3_LIB=$$(find "$$CURL_IMP_DIR" -name "libnghttp3.a" -type f | head -1)'; \
+	echo 'BSSL_SSL=$$(find "$$CURL_IMP_DIR" -name "libssl.a" -type f | head -1)'; \
+	echo 'BSSL_CRYPTO=$$(find "$$CURL_IMP_DIR" -name "libcrypto.a" -type f | head -1)'; \
 	echo 'if [ -z "$$STATIC_LIB" ]; then'; \
 	echo '    echo "ERROR: libcurl-impersonate static library not found after build"'; \
 	echo '    find "$$CURL_IMP_DIR" -name "*.a" -type f'; \
 	echo '    exit 1'; \
 	echo 'fi'; \
-	echo 'echo "Built static library: $$STATIC_LIB"'; \
+	echo 'echo "Built static libraries:"'; \
+	echo 'echo "  curl: $$STATIC_LIB"'; \
+	echo 'echo "  ngtcp2: $$NGTCP2_LIB"'; \
+	echo 'echo "  nghttp3: $$NGHTTP3_LIB"'; \
+	echo 'echo "  ssl: $$BSSL_SSL"'; \
+	echo 'echo "  crypto: $$BSSL_CRYPTO"'; \
 	echo 'cp "$$STATIC_LIB" libcurl-impersonate.a'; \
 	echo ''; \
-	echo '# System libs needed by the static libcurl-impersonate.a'; \
-	echo 'export EXTRA_LIBS="-lnghttp2 -lbrotlidec -lbrotlicommon -lzstd -lidn2 -lssl -lcrypto"'; \
+	echo '# Libs needed at link time: system shared + built static archives'; \
+	echo 'export EXTRA_LIBS="$$NGTCP2_LIB $$NGHTTP3_LIB $$BSSL_SSL $$BSSL_CRYPTO -lnghttp2 -lbrotlidec -lbrotlicommon -lzstd -lidn2"'; \
 	echo ''; \
 	echo '# NTS build'; \
 	echo '%{_bindir}/phpize'; \
