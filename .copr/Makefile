@@ -1,9 +1,9 @@
 # COPR Makefile for automated php-curl-cffi builds
 #
-# This extension requires libcurl-impersonate.a (static library), which is not
-# available as a system package. The Makefile builds it from source during the
-# SRPM preparation phase (which has internet access), then bundles the .a into
-# the SRPM so the RPM build phase can link against it offline.
+# This extension requires libcurl-impersonate (static library), which is not
+# available as a system package. The Makefile bundles the curl-impersonate
+# source tarball into the SRPM, and the spec's %build compiles it natively
+# on each target architecture.
 #
 # To auto-rebuild when PHP is updated, enable "Auto-rebuild" in the COPR
 # project settings. This monitors BuildRequires (php-devel) for updates.
@@ -16,6 +16,7 @@ EXT_VERSION := $(shell curl -s https://api.github.com/repos/DigitalCyberSoft/php
 CURL_IMP_VERSION := $(shell curl -s https://api.github.com/repos/lwthiker/curl-impersonate/releases/latest | sed -n 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/p')
 
 EXT_URL = https://github.com/DigitalCyberSoft/php-curl-cffi/archive/refs/tags/v$(EXT_VERSION).tar.gz
+CURL_IMP_URL = https://github.com/lwthiker/curl-impersonate/archive/refs/tags/v$(CURL_IMP_VERSION).tar.gz
 RELEASE := $(shell cat $(CURDIR)/release 2>/dev/null || echo 1)
 
 # Default target for COPR
@@ -24,7 +25,6 @@ srpm:
 	@echo "Extension version: $(EXT_VERSION)"
 	@echo "curl-impersonate version: $(CURL_IMP_VERSION)"
 	@echo "Output directory: $(outdir)"
-	@echo "Architecture: $$(uname -m)"
 
 	# Validate versions were detected
 	@if [ -z "$(EXT_VERSION)" ]; then \
@@ -37,54 +37,26 @@ srpm:
 		exit 1; \
 	fi
 
-	# Install build dependencies for curl-impersonate
-	@echo "=== Installing curl-impersonate build dependencies ==="
-	@NEED_INSTALL=0; \
-	for cmd in git go cmake ninja gcc; do \
-		if ! command -v $$cmd >/dev/null 2>&1; then NEED_INSTALL=1; break; fi; \
-	done; \
-	if [ $$NEED_INSTALL -eq 1 ]; then \
-		echo "Installing missing build tools..."; \
-		dnf install -y git golang cmake ninja-build gcc gcc-c++ \
-			autoconf automake libtool python3 make \
-			zlib-devel || exit 1; \
-	else \
-		echo "Build tools already available"; \
-	fi
-
-	# Build curl-impersonate from source (Chrome variant with BoringSSL)
-	@echo "=== Building curl-impersonate $(CURL_IMP_VERSION) ==="
-	@rm -rf _curl_imp_build; \
-	git clone --depth=1 --branch v$(CURL_IMP_VERSION) \
-		https://github.com/lwthiker/curl-impersonate.git \
-		_curl_imp_build || exit 1; \
-	\
-	cd _curl_imp_build && \
-	mkdir -p build && cd build && \
-	../configure --prefix=$$(pwd)/dist && \
-	$(MAKE) chrome-build && \
-	$(MAKE) chrome-install; \
-	BUILD_RC=$$?; \
-	cd ../..; \
-	\
-	if [ $$BUILD_RC -ne 0 ]; then \
-		echo "ERROR: curl-impersonate build failed"; \
-		exit 1; \
-	fi; \
-	\
-	STATIC_LIB=$$(find _curl_imp_build -name "libcurl-impersonate*.a" -type f | head -1); \
-	if [ -z "$$STATIC_LIB" ]; then \
-		echo "ERROR: Static library not found after build. Available .a files:"; \
-		find _curl_imp_build -name "*.a" -type f; \
-		exit 1; \
-	fi; \
-	echo "Built static library: $$STATIC_LIB"; \
-	cp "$$STATIC_LIB" libcurl-impersonate.a || exit 1; \
-	ls -lh libcurl-impersonate.a
+	# Install SRPM build dependencies
+	dnf -y install git rpm-build curl
 
 	# Download PHP extension source
 	@echo "=== Downloading php-curl-cffi $(EXT_VERSION) ==="
 	curl -L -o php-curl-cffi-$(EXT_VERSION).tar.gz $(EXT_URL) || exit 1
+
+	# Clone curl-impersonate source (not compiled -- built during %build)
+	@echo "=== Cloning curl-impersonate $(CURL_IMP_VERSION) ==="
+	rm -rf curl-impersonate
+	git clone --depth=1 --branch v$(CURL_IMP_VERSION) \
+		https://github.com/lwthiker/curl-impersonate.git \
+		curl-impersonate || exit 1
+
+	# Create curl-impersonate source tarball (exclude .git to save space)
+	@echo "=== Packaging curl-impersonate source ==="
+	tar czf curl-impersonate-$(CURL_IMP_VERSION).tar.gz \
+		--exclude='.git' \
+		curl-impersonate/
+	@echo "  curl-impersonate tarball: $$(du -h curl-impersonate-$(CURL_IMP_VERSION).tar.gz | cut -f1)"
 
 	# Generate spec file
 	@echo "=== Generating spec file ==="
@@ -104,11 +76,18 @@ srpm:
 	echo 'License:        MIT'; \
 	echo 'URL:            https://github.com/DigitalCyberSoft/php-curl-cffi'; \
 	echo 'Source0:        php-curl-cffi-%{version}.tar.gz'; \
-	echo 'Source1:        libcurl-impersonate.a'; \
+	echo 'Source1:        curl-impersonate-$(CURL_IMP_VERSION).tar.gz'; \
 	echo ''; \
 	echo 'BuildRequires:  gcc'; \
 	echo 'BuildRequires:  gcc-c++'; \
 	echo 'BuildRequires:  make'; \
+	echo 'BuildRequires:  cmake >= 3.12'; \
+	echo 'BuildRequires:  ninja-build'; \
+	echo 'BuildRequires:  golang'; \
+	echo 'BuildRequires:  autoconf'; \
+	echo 'BuildRequires:  automake'; \
+	echo 'BuildRequires:  libtool'; \
+	echo 'BuildRequires:  python3'; \
 	echo 'BuildRequires:  php-devel >= 8.0'; \
 	echo 'BuildRequires:  libcurl-devel'; \
 	echo 'BuildRequires:  zlib-devel'; \
@@ -140,10 +119,7 @@ srpm:
 	echo 'These are the files needed to compile programs using %{name}.'; \
 	echo ''; \
 	echo '%prep'; \
-	echo '%setup -q -n php-curl-cffi-%{version}'; \
-	echo ''; \
-	echo '# Copy the pre-built static library into the source tree'; \
-	echo 'cp %{SOURCE1} .'; \
+	echo '%setup -q -n php-curl-cffi-%{version} -a 1'; \
 	echo ''; \
 	echo '# Sanity check'; \
 	echo 'extver=$$(sed -n '"'"'/#define PHP_CURL_IMPERSONATE_VERSION/{s/.* "//;s/".*$$//;p}'"'"' php_curl_impersonate.h)'; \
@@ -158,6 +134,25 @@ srpm:
 	echo '%endif'; \
 	echo ''; \
 	echo '%build'; \
+	echo '# Build curl-impersonate from bundled source'; \
+	echo 'CURL_IMP_DIR=$$(pwd)/curl-impersonate'; \
+	echo 'cd "$$CURL_IMP_DIR"'; \
+	echo 'mkdir -p build && cd build'; \
+	echo '../configure --prefix=$$(pwd)/dist'; \
+	echo 'make %{?_smp_mflags} chrome-build'; \
+	echo 'make chrome-install'; \
+	echo 'cd ../../'; \
+	echo ''; \
+	echo '# Find the built static library'; \
+	echo 'STATIC_LIB=$$(find "$$CURL_IMP_DIR" -name "libcurl-impersonate*.a" -type f | head -1)'; \
+	echo 'if [ -z "$$STATIC_LIB" ]; then'; \
+	echo '    echo "ERROR: libcurl-impersonate static library not found after build"'; \
+	echo '    find "$$CURL_IMP_DIR" -name "*.a" -type f'; \
+	echo '    exit 1'; \
+	echo 'fi'; \
+	echo 'echo "Built static library: $$STATIC_LIB"'; \
+	echo 'cp "$$STATIC_LIB" libcurl-impersonate.a'; \
+	echo ''; \
 	echo '# NTS build'; \
 	echo '%{_bindir}/phpize'; \
 	echo '%configure \'; \
@@ -170,6 +165,7 @@ srpm:
 	echo '%if %{with_zts}'; \
 	echo '# ZTS build'; \
 	echo 'cd ../ZTS'; \
+	echo 'cp "$$STATIC_LIB" libcurl-impersonate.a'; \
 	echo '%{_bindir}/zts-phpize'; \
 	echo '%configure \'; \
 	echo '    --with-php-config=%{_bindir}/zts-php-config \'; \
@@ -258,7 +254,7 @@ srpm:
 	ls -la $(outdir)/*.src.rpm
 
 clean:
-	@rm -f *.tar.gz *.spec *.src.rpm *.a
-	@rm -rf _curl_imp_build php-curl-cffi-*/
+	@rm -f *.tar.gz *.spec *.src.rpm
+	@rm -rf curl-impersonate/ php-curl-cffi-*/
 
 .PHONY: srpm clean
