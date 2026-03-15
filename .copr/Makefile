@@ -51,7 +51,30 @@ srpm:
 		https://github.com/lwthiker/curl-impersonate.git \
 		curl-impersonate || exit 1
 
-	# Create curl-impersonate source tarball (exclude .git to save space)
+	# Pre-fetch curl-impersonate build dependencies into its source tree
+	# (RPM %build has no network access, so these must be bundled)
+	@echo "=== Downloading curl-impersonate build dependencies ==="
+	@cd curl-impersonate && \
+	BROTLI_VER=$$(sed -n 's/^BROTLI_VERSION := //p' Makefile.in); \
+	BSSL_COMMIT=$$(sed -n 's/^BORING_SSL_COMMIT := //p' Makefile.in); \
+	NGHTTP2_URL=$$(sed -n 's/^NGHTTP2_URL := //p' Makefile.in); \
+	NGHTTP2_VER=$$(sed -n 's/^NGHTTP2_VERSION := //p' Makefile.in); \
+	CURL_VER=$$(sed -n 's/^CURL_VERSION := //p' Makefile.in); \
+	echo "  brotli: $$BROTLI_VER"; \
+	echo "  BoringSSL: $$BSSL_COMMIT"; \
+	echo "  nghttp2: $$NGHTTP2_VER"; \
+	echo "  curl: $$CURL_VER"; \
+	curl -fL -o "brotli-$$BROTLI_VER.tar.gz" \
+		"https://github.com/google/brotli/archive/refs/tags/v$$BROTLI_VER.tar.gz" || exit 1; \
+	curl -fL -o boringssl.zip \
+		"https://github.com/google/boringssl/archive/$$BSSL_COMMIT.zip" || exit 1; \
+	curl -fL -o "$$NGHTTP2_VER.tar.bz2" \
+		"$$NGHTTP2_URL" || exit 1; \
+	curl -fL -o "$$CURL_VER.tar.xz" \
+		"https://curl.se/download/$$CURL_VER.tar.xz" || exit 1; \
+	echo "  All dependencies downloaded"
+
+	# Create curl-impersonate source tarball (with pre-fetched deps, exclude .git)
 	@echo "=== Packaging curl-impersonate source ==="
 	tar czf curl-impersonate-$(CURL_IMP_VERSION).tar.gz \
 		--exclude='.git' \
@@ -88,6 +111,7 @@ srpm:
 	echo 'BuildRequires:  automake'; \
 	echo 'BuildRequires:  libtool'; \
 	echo 'BuildRequires:  python3'; \
+	echo 'BuildRequires:  unzip'; \
 	echo 'BuildRequires:  php-devel >= 8.0'; \
 	echo 'BuildRequires:  libcurl-devel'; \
 	echo 'BuildRequires:  zlib-devel'; \
@@ -138,6 +162,8 @@ srpm:
 	echo 'CURL_IMP_DIR=$$(pwd)/curl-impersonate'; \
 	echo 'cd "$$CURL_IMP_DIR"'; \
 	echo 'mkdir -p build && cd build'; \
+	echo '# Copy pre-fetched dependency archives so make does not try to download'; \
+	echo 'cp ../*.tar.gz ../*.tar.bz2 ../*.tar.xz ../*.zip . 2>/dev/null || :'; \
 	echo '../configure --prefix=$$(pwd)/dist'; \
 	echo 'make %{?_smp_mflags} chrome-build'; \
 	echo 'make chrome-install'; \
