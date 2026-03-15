@@ -55,24 +55,15 @@ srpm:
 	# (RPM %build has no network access, so these must be bundled)
 	@echo "=== Downloading curl-impersonate build dependencies ==="
 	@cd curl-impersonate && \
-	BROTLI_VER=$$(sed -n 's/^BROTLI_VERSION := //p' Makefile.in); \
 	BSSL_COMMIT=$$(sed -n 's/^BORING_SSL_COMMIT := //p' Makefile.in); \
-	NGHTTP2_URL=$$(sed -n 's/^NGHTTP2_URL := //p' Makefile.in); \
-	NGHTTP2_VER=$$(sed -n 's/^NGHTTP2_VERSION := //p' Makefile.in); \
 	CURL_VER=$$(sed -n 's/^CURL_VERSION := //p' Makefile.in); \
-	echo "  brotli: $$BROTLI_VER"; \
 	echo "  BoringSSL: $$BSSL_COMMIT"; \
-	echo "  nghttp2: $$NGHTTP2_VER"; \
 	echo "  curl: $$CURL_VER"; \
-	curl -fL -o "brotli-$$BROTLI_VER.tar.gz" \
-		"https://github.com/google/brotli/archive/refs/tags/v$$BROTLI_VER.tar.gz" || exit 1; \
 	curl -fL -o boringssl.zip \
 		"https://github.com/google/boringssl/archive/$$BSSL_COMMIT.zip" || exit 1; \
-	curl -fL -o "$$NGHTTP2_VER.tar.bz2" \
-		"$$NGHTTP2_URL" || exit 1; \
 	curl -fL -o "$$CURL_VER.tar.xz" \
 		"https://curl.se/download/$$CURL_VER.tar.xz" || exit 1; \
-	echo "  All dependencies downloaded"
+	echo "  Dependencies downloaded (brotli and nghttp2 use system packages)"
 
 	# Create curl-impersonate source tarball (with pre-fetched deps, exclude .git)
 	@echo "=== Packaging curl-impersonate source ==="
@@ -115,6 +106,8 @@ srpm:
 	echo 'BuildRequires:  php-devel >= 8.0'; \
 	echo 'BuildRequires:  libcurl-devel'; \
 	echo 'BuildRequires:  zlib-devel'; \
+	echo 'BuildRequires:  brotli-devel'; \
+	echo 'BuildRequires:  libnghttp2-devel'; \
 	echo ''; \
 	echo 'Requires:       php(zend-abi) = %{php_zend_api}'; \
 	echo 'Requires:       php(api) = %{php_core_api}'; \
@@ -159,14 +152,17 @@ srpm:
 	echo ''; \
 	echo '%build'; \
 	echo '# Build curl-impersonate from bundled source'; \
+	echo '# Only BoringSSL and curl are built from source; brotli and nghttp2 use system packages'; \
 	echo 'CURL_IMP_DIR=$$(pwd)/curl-impersonate'; \
 	echo 'cd "$$CURL_IMP_DIR"'; \
 	echo 'mkdir -p build && cd build'; \
 	echo '# Copy pre-fetched dependency archives so make does not try to download'; \
 	echo 'cp ../*.tar.gz ../*.tar.bz2 ../*.tar.xz ../*.zip . 2>/dev/null || :'; \
 	echo '../configure --prefix=$$(pwd)/dist'; \
-	echo '# Disable tests in brotli cmake (missing test data causes CMake CTest errors)'; \
-	echo 'sed -i '"'"'s/cmake -DCMAKE_BUILD_TYPE/cmake -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE/'"'"' Makefile'; \
+	echo '# Patch Makefile to use system brotli and nghttp2 instead of building from source'; \
+	echo 'sed -i '"'"'s|^chrome_libs := .*|chrome_libs := $$(boringssl_static_libs)|'"'"' Makefile'; \
+	echo 'sed -i '"'"'s|--with-nghttp2=$$(nghttp2_install_dir)|--with-nghttp2|'"'"' Makefile'; \
+	echo 'sed -i '"'"'s|--with-brotli=$$(brotli_install_dir)|--with-brotli|'"'"' Makefile'; \
 	echo 'make %{?_smp_mflags} chrome-build'; \
 	echo 'make chrome-install'; \
 	echo 'cd ../../'; \
