@@ -1,4 +1,4 @@
-name: Check PHP Version
+name: Check and Auto-Update Versions
 
 on:
   schedule:
@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for PHP version changes
+      - name: Check for version changes
         id: check
         run: ./check_php_version.sh --check-only || echo "changes=true" >> "$GITHUB_OUTPUT"
 
@@ -22,3 +22,9 @@ jobs:
           git config user.name "PHP Version Checker"
           git config user.email "bot@github-actions"
           ./check_php_version.sh --update
+
+      # Prevent GitHub from disabling this scheduled workflow after 60 days
+      # of repo inactivity
+      - uses: gautamkrishnar/keepalive-workflow@v2
+        with:
+          time_elapsed: 45
