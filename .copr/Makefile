@@ -177,6 +177,9 @@ srpm:
 	echo 'sed -i '"'"'s|--with-zstd=$$(zstd_install_dir)|--with-zstd|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-zlib=$$(zlib_install_dir)|--with-zlib|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-libidn2=$$(libidn2_install_dir)|--with-libidn2|'"'"' Makefile'; \
+	echo '# Ensure -fPIC for all static libs that end up in the shared .so'; \
+	echo 'export CFLAGS="$$CFLAGS -fPIC"'; \
+	echo 'export CXXFLAGS="$$CXXFLAGS -fPIC"'; \
 	echo 'make build'; \
 	echo 'make install'; \
 	echo 'cd ../../'; \
