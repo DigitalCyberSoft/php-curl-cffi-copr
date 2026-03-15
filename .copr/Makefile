@@ -202,15 +202,17 @@ srpm:
 	echo 'echo "  crypto: $$BSSL_CRYPTO"'; \
 	echo 'cp "$$STATIC_LIB" libcurl-impersonate.a'; \
 	echo ''; \
-	echo '# Libs needed at link time: system shared + built static archives'; \
-	echo 'export EXTRA_LIBS="$$NGTCP2_CRYPTO $$NGTCP2_LIB $$NGHTTP3_LIB $$BSSL_SSL $$BSSL_CRYPTO -lnghttp2 -lbrotlidec -lbrotlicommon -lzstd -lidn2 -lpthread"'; \
+	echo '# Extra libs needed at link time: built static archives + system shared libs'; \
+	echo 'EXTRA_LIBS="$$NGTCP2_CRYPTO $$NGTCP2_LIB $$NGHTTP3_LIB $$BSSL_SSL $$BSSL_CRYPTO -lnghttp2 -lbrotlidec -lbrotlicommon -lzstd -lidn2 -lpthread"'; \
 	echo ''; \
 	echo '# NTS build'; \
 	echo '%{_bindir}/phpize'; \
-	echo 'LIBS="$$EXTRA_LIBS" %configure \'; \
+	echo '%configure \'; \
 	echo '    --with-php-config=%{_bindir}/php-config \'; \
 	echo '    --with-libdir=%{_lib} \'; \
 	echo '    --with-curl-impersonate=$$PWD/libcurl-impersonate.a'; \
+	echo '# Inject extra libs into the generated Makefile (config.m4 only links -lz -lpthread -ldl -lm -lstdc++)'; \
+	echo 'sed -i "s|^CURL_IMPERSONATE_SHARED_LIBADD = |CURL_IMPERSONATE_SHARED_LIBADD = $$EXTRA_LIBS |" Makefile'; \
 	echo ''; \
 	echo 'make %{?_smp_mflags}'; \
 	echo ''; \
@@ -219,10 +221,11 @@ srpm:
 	echo 'cd ../ZTS'; \
 	echo 'cp "$$STATIC_LIB" libcurl-impersonate.a'; \
 	echo '%{_bindir}/zts-phpize'; \
-	echo 'LIBS="$$EXTRA_LIBS" %configure \'; \
+	echo '%configure \'; \
 	echo '    --with-php-config=%{_bindir}/zts-php-config \'; \
 	echo '    --with-libdir=%{_lib} \'; \
 	echo '    --with-curl-impersonate=$$PWD/libcurl-impersonate.a'; \
+	echo 'sed -i "s|^CURL_IMPERSONATE_SHARED_LIBADD = |CURL_IMPERSONATE_SHARED_LIBADD = $$EXTRA_LIBS |" Makefile'; \
 	echo ''; \
 	echo 'make %{?_smp_mflags}'; \
 	echo '%endif'; \
