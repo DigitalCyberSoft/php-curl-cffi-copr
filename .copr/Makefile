@@ -56,9 +56,7 @@ srpm:
 	@cd curl-impersonate && \
 	BSSL_COMMIT=$$(sed -n 's/^BORING_SSL_COMMIT := //p' Makefile.in); \
 	CURL_VER=$$(sed -n 's/^CURL_VERSION := //p' Makefile.in); \
-	NGTCP2_URL=$$(sed -n 's/^NGTCP2_URL := //p' Makefile.in); \
 	NGTCP2_VER=$$(sed -n 's/^NGTCP2_VERSION := //p' Makefile.in); \
-	NGHTTP3_URL=$$(sed -n 's/^NGHTTP3_URL := //p' Makefile.in); \
 	NGHTTP3_VER=$$(sed -n 's/^NGHTTP3_VERSION := //p' Makefile.in); \
 	echo "  BoringSSL: $$BSSL_COMMIT"; \
 	echo "  curl: $$CURL_VER"; \
@@ -69,9 +67,9 @@ srpm:
 	curl -fL -o "$$CURL_VER.tar.gz" \
 		"https://github.com/curl/curl/archive/$$CURL_VER.tar.gz" || exit 1; \
 	curl -fL -o "ngtcp2-$$NGTCP2_VER.tar.bz2" \
-		"$$NGTCP2_URL" || exit 1; \
+		"https://github.com/ngtcp2/ngtcp2/releases/download/v$$NGTCP2_VER/ngtcp2-$$NGTCP2_VER.tar.bz2" || exit 1; \
 	curl -fL -o "nghttp3-$$NGHTTP3_VER.tar.bz2" \
-		"$$NGHTTP3_URL" || exit 1; \
+		"https://github.com/ngtcp2/nghttp3/releases/download/v$$NGHTTP3_VER/nghttp3-$$NGHTTP3_VER.tar.bz2" || exit 1; \
 	echo "  Dependencies downloaded (brotli, nghttp2, zstd, idn2 use system packages)"
 
 	# Create curl-impersonate source tarball (with pre-fetched deps, exclude .git)
