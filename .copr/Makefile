@@ -168,8 +168,9 @@ srpm:
 	echo 'sed -i '"'"'s|--with-zstd=$$(zstd_install_dir)|--with-zstd|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-zlib=$$(zlib_install_dir)|--with-zlib|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-libidn2=$$(libidn2_install_dir)|--with-libidn2|'"'"' Makefile'; \
-	echo 'sed -i '"'"'s|--with-nghttp3=$$(nghttp3_install_dir)|--with-nghttp3=/dev/null|'"'"' Makefile'; \
-	echo 'sed -i '"'"'s|--with-ngtcp2=$$(ngtcp2_install_dir)|--with-ngtcp2=/dev/null|'"'"' Makefile'; \
+	echo '# Disable HTTP/3 (ngtcp2/nghttp3 require BoringSSL-linked builds, not available as system pkgs)'; \
+	echo 'sed -i '"'"'s|--with-nghttp3=$$(nghttp3_install_dir)||'"'"' Makefile'; \
+	echo 'sed -i '"'"'s|--with-ngtcp2=$$(ngtcp2_install_dir)||'"'"' Makefile'; \
 	echo 'make build'; \
 	echo 'make install'; \
 	echo 'cd ../../'; \
