@@ -165,6 +165,8 @@ srpm:
 	echo '# Copy pre-fetched dependency archives so make does not try to download'; \
 	echo 'cp ../*.tar.gz ../*.tar.bz2 ../*.tar.xz ../*.zip . 2>/dev/null || :'; \
 	echo '../configure --prefix=$$(pwd)/dist'; \
+	echo '# Disable tests in brotli cmake (missing test data causes CMake CTest errors)'; \
+	echo 'sed -i '"'"'s/cmake -DCMAKE_BUILD_TYPE/cmake -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE/'"'"' Makefile'; \
 	echo 'make %{?_smp_mflags} chrome-build'; \
 	echo 'make chrome-install'; \
 	echo 'cd ../../'; \
