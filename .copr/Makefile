@@ -177,9 +177,12 @@ srpm:
 	echo 'echo "Built static library: $$STATIC_LIB"'; \
 	echo 'cp "$$STATIC_LIB" libcurl-impersonate.a'; \
 	echo ''; \
+	echo '# System libs needed by the static libcurl-impersonate.a'; \
+	echo 'export EXTRA_LIBS="-lnghttp2 -lbrotlidec -lbrotlicommon -lssl -lcrypto"'; \
+	echo ''; \
 	echo '# NTS build'; \
 	echo '%{_bindir}/phpize'; \
-	echo '%configure \'; \
+	echo 'LIBS="$$EXTRA_LIBS" %configure \'; \
 	echo '    --with-php-config=%{_bindir}/php-config \'; \
 	echo '    --with-libdir=%{_lib} \'; \
 	echo '    --with-curl-impersonate=$$PWD/libcurl-impersonate.a'; \
@@ -191,7 +194,7 @@ srpm:
 	echo 'cd ../ZTS'; \
 	echo 'cp "$$STATIC_LIB" libcurl-impersonate.a'; \
 	echo '%{_bindir}/zts-phpize'; \
-	echo '%configure \'; \
+	echo 'LIBS="$$EXTRA_LIBS" %configure \'; \
 	echo '    --with-php-config=%{_bindir}/zts-php-config \'; \
 	echo '    --with-libdir=%{_lib} \'; \
 	echo '    --with-curl-impersonate=$$PWD/libcurl-impersonate.a'; \
