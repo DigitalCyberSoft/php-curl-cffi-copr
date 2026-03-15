@@ -93,7 +93,7 @@ srpm:
 	echo ''; \
 	echo 'Name:           php-%{pecl_name}'; \
 	echo 'Version:        $(EXT_VERSION)'; \
-	echo 'Release:        $(RELEASE)%{?dist}'; \
+	echo 'Release:        $(RELEASE).ci$(CURL_IMP_VERSION)%{?dist}'; \
 	echo 'Summary:        Browser TLS/HTTP2 fingerprint impersonation for PHP'; \
 	echo ''; \
 	echo 'License:        MIT'; \
@@ -257,7 +257,7 @@ srpm:
 	echo '%{php_incldir}/ext/%{pecl_name}'; \
 	echo ''; \
 	echo '%changelog'; \
-	echo "* $$(date '+%a %b %d %Y') COPR Builder - $(EXT_VERSION)-1"; \
+	echo "* $$(date '+%a %b %d %Y') COPR Builder - $(EXT_VERSION)-1.ci$(CURL_IMP_VERSION)"; \
 	echo '- Automated build from GitHub release $(EXT_VERSION)'; \
 	echo '- Bundled libcurl-impersonate $(CURL_IMP_VERSION)'; \
 	echo '- Browser TLS/HTTP2 fingerprint impersonation for PHP'; \
