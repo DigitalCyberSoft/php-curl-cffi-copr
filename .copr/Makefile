@@ -163,7 +163,7 @@ srpm:
 	echo 'sed -i '"'"'s|^chrome_libs := .*|chrome_libs := $$(boringssl_static_libs)|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-nghttp2=$$(nghttp2_install_dir)|--with-nghttp2|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-brotli=$$(brotli_install_dir)|--with-brotli|'"'"' Makefile'; \
-	echo 'make %{?_smp_mflags} chrome-build'; \
+	echo 'make chrome-build'; \
 	echo 'make chrome-install'; \
 	echo 'cd ../../'; \
 	echo ''; \
