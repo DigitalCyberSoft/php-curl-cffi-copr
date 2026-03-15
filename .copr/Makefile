@@ -215,7 +215,7 @@ srpm:
 	echo '    --with-libdir=%{_lib} \'; \
 	echo '    --with-curl-impersonate=$$PWD/libcurl-impersonate.a'; \
 	echo '# Inject extra libs into the generated Makefile (config.m4 only links -lz -lpthread -ldl -lm -lstdc++)'; \
-	echo 'sed -i "s|^CURL_IMPERSONATE_SHARED_LIBADD = |CURL_IMPERSONATE_SHARED_LIBADD = $$EXTRA_LIBS |" Makefile'; \
+	echo 'sed -i "s|^\\(CURL_IMPERSONATE_SHARED_LIBADD = .*\\)|\\1 $$EXTRA_LIBS|" Makefile'; \
 	echo ''; \
 	echo 'make %{?_smp_mflags}'; \
 	echo ''; \
@@ -228,7 +228,7 @@ srpm:
 	echo '    --with-php-config=%{_bindir}/zts-php-config \'; \
 	echo '    --with-libdir=%{_lib} \'; \
 	echo '    --with-curl-impersonate=$$PWD/libcurl-impersonate.a'; \
-	echo 'sed -i "s|^CURL_IMPERSONATE_SHARED_LIBADD = |CURL_IMPERSONATE_SHARED_LIBADD = $$EXTRA_LIBS |" Makefile'; \
+	echo 'sed -i "s|^\\(CURL_IMPERSONATE_SHARED_LIBADD = .*\\)|\\1 $$EXTRA_LIBS|" Makefile'; \
 	echo ''; \
 	echo 'make %{?_smp_mflags}'; \
 	echo '%endif'; \
