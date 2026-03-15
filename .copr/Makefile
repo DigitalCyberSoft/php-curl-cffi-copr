@@ -183,7 +183,8 @@ srpm:
 	echo ''; \
 	echo '# Find the built static libraries'; \
 	echo 'STATIC_LIB=$$(find "$$CURL_IMP_DIR" -name "libcurl-impersonate*.a" -type f | head -1)'; \
-	echo 'NGTCP2_LIB=$$(find "$$CURL_IMP_DIR" -name "libngtcp2.a" -type f | head -1)'; \
+	echo 'NGTCP2_LIB=$$(find "$$CURL_IMP_DIR" -name "libngtcp2.a" -not -name "libngtcp2_crypto*" -type f | head -1)'; \
+	echo 'NGTCP2_CRYPTO=$$(find "$$CURL_IMP_DIR" -name "libngtcp2_crypto_boringssl.a" -type f | head -1)'; \
 	echo 'NGHTTP3_LIB=$$(find "$$CURL_IMP_DIR" -name "libnghttp3.a" -type f | head -1)'; \
 	echo 'BSSL_SSL=$$(find "$$CURL_IMP_DIR" -name "libssl.a" -type f | head -1)'; \
 	echo 'BSSL_CRYPTO=$$(find "$$CURL_IMP_DIR" -name "libcrypto.a" -type f | head -1)'; \
@@ -195,13 +196,14 @@ srpm:
 	echo 'echo "Built static libraries:"'; \
 	echo 'echo "  curl: $$STATIC_LIB"'; \
 	echo 'echo "  ngtcp2: $$NGTCP2_LIB"'; \
+	echo 'echo "  ngtcp2_crypto: $$NGTCP2_CRYPTO"'; \
 	echo 'echo "  nghttp3: $$NGHTTP3_LIB"'; \
 	echo 'echo "  ssl: $$BSSL_SSL"'; \
 	echo 'echo "  crypto: $$BSSL_CRYPTO"'; \
 	echo 'cp "$$STATIC_LIB" libcurl-impersonate.a'; \
 	echo ''; \
 	echo '# Libs needed at link time: system shared + built static archives'; \
-	echo 'export EXTRA_LIBS="$$NGTCP2_LIB $$NGHTTP3_LIB $$BSSL_SSL $$BSSL_CRYPTO -lnghttp2 -lbrotlidec -lbrotlicommon -lzstd -lidn2"'; \
+	echo 'export EXTRA_LIBS="$$NGTCP2_CRYPTO $$NGTCP2_LIB $$NGHTTP3_LIB $$BSSL_SSL $$BSSL_CRYPTO -lnghttp2 -lbrotlidec -lbrotlicommon -lzstd -lidn2 -lpthread"'; \
 	echo ''; \
 	echo '# NTS build'; \
 	echo '%{_bindir}/phpize'; \
