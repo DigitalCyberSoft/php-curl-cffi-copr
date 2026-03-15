@@ -13,10 +13,9 @@ outdir ?= .
 
 # Fetch latest release versions from GitHub
 EXT_VERSION := $(shell curl -s https://api.github.com/repos/DigitalCyberSoft/php-curl-cffi/releases/latest | sed -n 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/p')
-CURL_IMP_VERSION := $(shell curl -s https://api.github.com/repos/lwthiker/curl-impersonate/releases/latest | sed -n 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/p')
+CURL_IMP_VERSION := $(shell curl -s https://api.github.com/repos/lexiforest/curl-impersonate/releases/latest | sed -n 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/p')
 
 EXT_URL = https://github.com/DigitalCyberSoft/php-curl-cffi/archive/refs/tags/v$(EXT_VERSION).tar.gz
-CURL_IMP_URL = https://github.com/lwthiker/curl-impersonate/archive/refs/tags/v$(CURL_IMP_VERSION).tar.gz
 RELEASE := $(shell cat $(CURDIR)/release 2>/dev/null || echo 1)
 
 # Default target for COPR
@@ -48,7 +47,7 @@ srpm:
 	@echo "=== Cloning curl-impersonate $(CURL_IMP_VERSION) ==="
 	rm -rf curl-impersonate
 	git clone --depth=1 --branch v$(CURL_IMP_VERSION) \
-		https://github.com/lwthiker/curl-impersonate.git \
+		https://github.com/lexiforest/curl-impersonate.git \
 		curl-impersonate || exit 1
 
 	# Pre-fetch curl-impersonate build dependencies into its source tree
@@ -59,11 +58,11 @@ srpm:
 	CURL_VER=$$(sed -n 's/^CURL_VERSION := //p' Makefile.in); \
 	echo "  BoringSSL: $$BSSL_COMMIT"; \
 	echo "  curl: $$CURL_VER"; \
-	curl -fL -o boringssl.zip \
+	curl -fL -o "boringssl-$$BSSL_COMMIT.zip" \
 		"https://github.com/google/boringssl/archive/$$BSSL_COMMIT.zip" || exit 1; \
-	curl -fL -o "$$CURL_VER.tar.xz" \
-		"https://curl.se/download/$$CURL_VER.tar.xz" || exit 1; \
-	echo "  Dependencies downloaded (brotli and nghttp2 use system packages)"
+	curl -fL -o "$$CURL_VER.tar.gz" \
+		"https://github.com/curl/curl/archive/$$CURL_VER.tar.gz" || exit 1; \
+	echo "  Dependencies downloaded (brotli, nghttp2, zstd etc. use system packages)"
 
 	# Create curl-impersonate source tarball (with pre-fetched deps, exclude .git)
 	@echo "=== Packaging curl-impersonate source ==="
@@ -108,6 +107,8 @@ srpm:
 	echo 'BuildRequires:  zlib-devel'; \
 	echo 'BuildRequires:  brotli-devel'; \
 	echo 'BuildRequires:  libnghttp2-devel'; \
+	echo 'BuildRequires:  libzstd-devel'; \
+	echo 'BuildRequires:  libidn2-devel'; \
 	echo ''; \
 	echo 'Requires:       php(zend-abi) = %{php_zend_api}'; \
 	echo 'Requires:       php(api) = %{php_core_api}'; \
@@ -159,12 +160,18 @@ srpm:
 	echo '# Copy pre-fetched dependency archives so make does not try to download'; \
 	echo 'cp ../*.tar.gz ../*.tar.bz2 ../*.tar.xz ../*.zip . 2>/dev/null || :'; \
 	echo '../configure --prefix=$$(pwd)/dist'; \
-	echo '# Patch Makefile to use system brotli and nghttp2 instead of building from source'; \
+	echo '# Patch Makefile to use system libs instead of building from source'; \
+	echo '# Only BoringSSL needs to be built (it requires specific patches for impersonation)'; \
 	echo 'sed -i '"'"'s|^chrome_libs := .*|chrome_libs := $$(boringssl_static_libs)|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-nghttp2=$$(nghttp2_install_dir)|--with-nghttp2|'"'"' Makefile'; \
 	echo 'sed -i '"'"'s|--with-brotli=$$(brotli_install_dir)|--with-brotli|'"'"' Makefile'; \
-	echo 'make chrome-build'; \
-	echo 'make chrome-install'; \
+	echo 'sed -i '"'"'s|--with-zstd=$$(zstd_install_dir)|--with-zstd|'"'"' Makefile'; \
+	echo 'sed -i '"'"'s|--with-zlib=$$(zlib_install_dir)|--with-zlib|'"'"' Makefile'; \
+	echo 'sed -i '"'"'s|--with-libidn2=$$(libidn2_install_dir)|--with-libidn2|'"'"' Makefile'; \
+	echo 'sed -i '"'"'s|--with-nghttp3=$$(nghttp3_install_dir)|--with-nghttp3=/dev/null|'"'"' Makefile'; \
+	echo 'sed -i '"'"'s|--with-ngtcp2=$$(ngtcp2_install_dir)|--with-ngtcp2=/dev/null|'"'"' Makefile'; \
+	echo 'make build'; \
+	echo 'make install'; \
 	echo 'cd ../../'; \
 	echo ''; \
 	echo '# Find the built static library'; \
@@ -178,7 +185,7 @@ srpm:
 	echo 'cp "$$STATIC_LIB" libcurl-impersonate.a'; \
 	echo ''; \
 	echo '# System libs needed by the static libcurl-impersonate.a'; \
-	echo 'export EXTRA_LIBS="-lnghttp2 -lbrotlidec -lbrotlicommon -lssl -lcrypto"'; \
+	echo 'export EXTRA_LIBS="-lnghttp2 -lbrotlidec -lbrotlicommon -lzstd -lidn2 -lssl -lcrypto"'; \
 	echo ''; \
 	echo '# NTS build'; \
 	echo '%{_bindir}/phpize'; \

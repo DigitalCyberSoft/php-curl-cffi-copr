@@ -19,7 +19,7 @@ CI_VERSION_FILE="$SCRIPT_DIR/ci_version"
 
 # Repos to monitor for version changes
 EXT_GITHUB_REPO="DigitalCyberSoft/php-curl-cffi"
-CI_GITHUB_REPO="lwthiker/curl-impersonate"
+CI_GITHUB_REPO="lexiforest/curl-impersonate"
 
 # Fedora releases to monitor (space-separated)
 FEDORA_RELEASES="f41 f42 rawhide"
