@@ -232,7 +232,9 @@ srpm:
 	echo '# Minimal load test for NTS extension'; \
 	echo '%{__php} --no-php-ini \'; \
 	echo '    --define extension=%{buildroot}%{php_extdir}/%{pecl_name}.so \'; \
-	echo '    --modules | grep "^%{pecl_name}$$"'; \
+	echo '    -m > /tmp/php_modules.txt 2>&1 || true'; \
+	echo 'cat /tmp/php_modules.txt'; \
+	echo 'grep "^%{pecl_name}$$" /tmp/php_modules.txt'; \
 	echo ''; \
 	echo '%if %{with_zts}'; \
 	echo '# Minimal load test for ZTS extension'; \
