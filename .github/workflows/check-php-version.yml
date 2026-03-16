@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
   check:
@@ -31,6 +30,15 @@ jobs:
 
       # Prevent GitHub from disabling this scheduled workflow after 60 days
       # of repo inactivity
-      - uses: gautamkrishnar/keepalive-workflow@v2
-        with:
-          time_elapsed: 45
+      - name: Keepalive
+        if: always()
+        run: |
+          LAST_COMMIT=$(git log -1 --format=%ct)
+          NOW=$(date +%s)
+          DAYS_SINCE=$(( (NOW - LAST_COMMIT) / 86400 ))
+          if [ "$DAYS_SINCE" -gt 45 ]; then
+            git config user.name "GitHub Actions Bot"
+            git config user.email "actions@github.com"
+            git commit --allow-empty -m "Keepalive: prevent scheduled workflow from being disabled"
+            git push
+          fi
