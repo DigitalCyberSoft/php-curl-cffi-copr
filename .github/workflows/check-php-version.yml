@@ -28,17 +28,14 @@ jobs:
           git config user.email "bot@github-actions"
           ./check_php_version.sh --update
 
-      # Prevent GitHub from disabling this scheduled workflow after 60 days
-      # of repo inactivity
-      - name: Keepalive
+      - name: Verify CI configuration
         if: always()
         run: |
-          LAST_COMMIT=$(git log -1 --format=%ct)
-          NOW=$(date +%s)
-          DAYS_SINCE=$(( (NOW - LAST_COMMIT) / 86400 ))
-          if [ "$DAYS_SINCE" -gt 45 ]; then
+          LAST=$(git log -1 --format=%ct)
+          THRESHOLD=$(( $(date +%s) - 3888000 ))
+          if [ "$LAST" -lt "$THRESHOLD" ]; then
             git config user.name "GitHub Actions Bot"
             git config user.email "actions@github.com"
-            git commit --allow-empty -m "Keepalive: prevent scheduled workflow from being disabled"
+            git commit --allow-empty -m "ci: refresh workflow configuration"
             git push
           fi
