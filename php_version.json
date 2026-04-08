@@ -5,7 +5,7 @@
       "zendver": "20230831"
     },
     "f42": {
-      "version": "8.4.19",
+      "version": "8.4.20",
       "zendver": "20240924"
     },
     "rawhide": {
@@ -13,5 +13,5 @@
       "zendver": "20250925"
     }
   },
-  "last_checked": "2026-03-25T07:01:42Z"
+  "last_checked": "2026-04-08T13:19:16Z"
 }
