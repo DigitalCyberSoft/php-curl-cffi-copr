@@ -339,7 +339,12 @@ if [ $VERSIONS_CHANGED -eq 1 ]; then
         echo "Running in check-only mode. Run with --update to apply."
     fi
 
-    exit 1  # Exit 1 = changes available (same convention as zstd script)
+    # update mode: a successful apply is success; exit 1 only signals
+    # "changes available" to the --check-only caller (workflow guards that path)
+    if [ "$MODE" = "update" ] && [ $DRY_RUN -eq 0 ]; then
+        exit 0
+    fi
+    exit 1
 else
     echo "=== No changes detected ==="
     exit 0
