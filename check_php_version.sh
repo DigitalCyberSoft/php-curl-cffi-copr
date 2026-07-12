@@ -57,7 +57,7 @@ fetch_spec() {
 
     if [ -z "${!cache_var}" ]; then
         local spec
-        spec=$(curl -sf "https://src.fedoraproject.org/rpms/php/raw/${branch}/f/php.spec" 2>/dev/null) || true
+        spec=$(curl -sf --connect-timeout 15 --max-time 60 --retry 3 --retry-all-errors "https://src.fedoraproject.org/rpms/php/raw/${branch}/f/php.spec" 2>/dev/null) || true
         eval "${cache_var}=\"\${spec}\""
     fi
 
@@ -121,7 +121,7 @@ get_saved_zendver() {
 # Check if the extension version has changed on GitHub
 check_ext_version() {
     local new_ver
-    new_ver=$(curl -sf "https://api.github.com/repos/${EXT_GITHUB_REPO}/releases/latest" 2>/dev/null \
+    new_ver=$(curl -sf --connect-timeout 15 --max-time 60 --retry 3 --retry-all-errors "https://api.github.com/repos/${EXT_GITHUB_REPO}/releases/latest" 2>/dev/null \
         | sed -n 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/p')
 
     if [ -z "$new_ver" ]; then
@@ -151,7 +151,7 @@ check_ext_version() {
 # Check if curl-impersonate version has changed on GitHub
 check_ci_version() {
     local new_ver
-    new_ver=$(curl -sf "https://api.github.com/repos/${CI_GITHUB_REPO}/releases/latest" 2>/dev/null \
+    new_ver=$(curl -sf --connect-timeout 15 --max-time 60 --retry 3 --retry-all-errors "https://api.github.com/repos/${CI_GITHUB_REPO}/releases/latest" 2>/dev/null \
         | sed -n 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/p')
 
     if [ -z "$new_ver" ]; then
