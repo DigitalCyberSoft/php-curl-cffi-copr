@@ -126,13 +126,20 @@ check_ext_version() {
 
     if [ "$new_ver" != "$saved_ver" ] && [ -n "$saved_ver" ]; then
         echo "  Extension UPDATED: ${saved_ver} -> ${new_ver} (resetting release to 1)"
-        echo "1" > "$RELEASE_FILE"
-        echo "$new_ver" > "$EXT_VERSION_FILE"
+        # Persist only when applying: writing during --check-only made the
+        # later --update invocation see no delta, so a standalone extension
+        # bump never committed on its own.
+        if [ "$MODE" = "update" ] && [ $DRY_RUN -eq 0 ]; then
+            echo "1" > "$RELEASE_FILE"
+            echo "$new_ver" > "$EXT_VERSION_FILE"
+        fi
         return 0  # changed
     fi
 
-    # First run or no change
-    echo "$new_ver" > "$EXT_VERSION_FILE"
+    # First run or no change; write the saved file only when applying
+    if [ "$MODE" = "update" ] && [ $DRY_RUN -eq 0 ]; then
+        echo "$new_ver" > "$EXT_VERSION_FILE"
+    fi
     return 1  # no change
 }
 
@@ -162,12 +169,19 @@ check_ci_version() {
 
     if [ "$new_ver" != "$saved_ver" ] && [ -n "$saved_ver" ]; then
         echo "  curl-impersonate UPDATED: ${saved_ver} -> ${new_ver}"
-        echo "$new_ver" > "$CI_VERSION_FILE"
+        # Persist only when applying: writing during --check-only made the
+        # later --update invocation see no delta, so a standalone
+        # curl-impersonate bump never committed on its own.
+        if [ "$MODE" = "update" ] && [ $DRY_RUN -eq 0 ]; then
+            echo "$new_ver" > "$CI_VERSION_FILE"
+        fi
         return 0  # changed
     fi
 
-    # First run or no change
-    echo "$new_ver" > "$CI_VERSION_FILE"
+    # First run or no change; write the saved file only when applying
+    if [ "$MODE" = "update" ] && [ $DRY_RUN -eq 0 ]; then
+        echo "$new_ver" > "$CI_VERSION_FILE"
+    fi
     return 1  # no change
 }
 
