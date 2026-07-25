@@ -19,10 +19,14 @@ jobs:
 
       - name: Check for version changes
         id: check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: ./check_php_version.sh --check-only || echo "changes=true" >> "$GITHUB_OUTPUT"
 
       - name: Update and push
         if: steps.check.outputs.changes == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           git config user.name "PHP Version Checker"
           git config user.email "bot@github-actions"
