@@ -159,12 +159,18 @@ check_ext_version() {
 # Check if curl-impersonate version has changed on GitHub
 check_ci_version() {
     local new_ver
+    local auth=()
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        auth=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+    fi
     new_ver=$(curl -sf "${auth[@]}" --connect-timeout 15 --max-time 60 --retry 3 --retry-all-errors "https://api.github.com/repos/${CI_GITHUB_REPO}/releases/latest" 2>/dev/null \
         | sed -n 's/.*"tag_name": *"v\?\([^"]*\)".*/\1/p')
 
+    # Hard error: API unreachable. Treating this as "no change" would
+    # silently skip the curl-impersonate check while the run reports success.
     if [ -z "$new_ver" ]; then
-        echo "  curl-impersonate version: unknown (API error)"
-        return 1
+        echo "ERROR: could not determine curl-impersonate version from GitHub API (${CI_GITHUB_REPO})" >&2
+        exit 1
     fi
 
     local saved_ver=""
