@@ -64,43 +64,23 @@ fetch_spec() {
     echo "${!cache_var}"
 }
 
-# Extract %global upver from spec (the actual PHP version, e.g. 8.4.19)
-get_php_version() {
+# Extract %global upver and zendver from one spec fetch (zendver is the
+# Zend ABI version - what actually determines whether the extension .so
+# is compatible). Sets NEW_VER and NEW_ZEND; call directly (not via $())
+# so a single fetch serves both fields - a $() subshell also discards
+# fetch_spec's cache, which previously doubled the fetches per release.
+get_php_release_info() {
     local branch="$1"
     local spec
     spec=$(fetch_spec "$branch")
 
-    local version
-    version=$(echo "$spec" | sed -n 's/^%global[[:space:]]\+upver[[:space:]]\+//p' | head -1)
+    NEW_VER=$(echo "$spec" | sed -n 's/^%global[[:space:]]\+upver[[:space:]]\+//p' | head -1)
+    NEW_ZEND=$(echo "$spec" | sed -n 's/^%global[[:space:]]\+zendver[[:space:]]\+//p' | head -1)
 
-    if [ -n "$version" ]; then
-        echo "$version"
-        return 0
+    if [ -z "$NEW_VER" ] || [ -z "$NEW_ZEND" ]; then
+        echo "ERROR: could not get PHP version/Zend ABI for ${branch} (spec fetch failed or format changed)" >&2
+        return 1
     fi
-
-    echo "ERROR: could not get PHP version for ${branch} (spec fetch failed or upver missing)" >&2
-    echo "unknown"
-    return 1
-}
-
-# Extract %global zendver from spec (the Zend ABI version - this is what
-# actually determines whether the extension .so is compatible)
-get_php_zendver() {
-    local branch="$1"
-    local spec
-    spec=$(fetch_spec "$branch")
-
-    local zendver
-    zendver=$(echo "$spec" | sed -n 's/^%global[[:space:]]\+zendver[[:space:]]\+//p' | head -1)
-
-    if [ -n "$zendver" ]; then
-        echo "$zendver"
-        return 0
-    fi
-
-    echo "ERROR: could not get Zend ABI version for ${branch} (spec fetch failed or zendver missing)" >&2
-    echo "unknown"
-    return 1
 }
 
 # Read saved version for a given release from php_version.json
@@ -296,8 +276,11 @@ echo
 for release in $FEDORA_RELEASES; do
     echo "Checking ${release}..."
 
-    new_ver=$(get_php_version "$release")
-    new_zend=$(get_php_zendver "$release")
+    if ! get_php_release_info "$release"; then
+        exit 1
+    fi
+    new_ver="$NEW_VER"
+    new_zend="$NEW_ZEND"
     saved_ver=$(get_saved_version "$release")
     saved_zend=$(get_saved_zendver "$release")
 
