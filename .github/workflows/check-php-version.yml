@@ -5,6 +5,11 @@ on:
     # Every 6 hours
     - cron: '0 */6 * * *'
   workflow_dispatch:
+    inputs:
+      copr_build:
+        description: 'Ask COPR to build even if no new commit is pushed'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -16,6 +21,10 @@ jobs:
       - uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Record the remote head
+        id: copr_before
+        run: echo "head=$(git ls-remote origin HEAD | cut -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Check for version changes
         id: check
@@ -31,6 +40,36 @@ jobs:
           git config user.name "PHP Version Checker"
           git config user.email "bot@github-actions"
           ./check_php_version.sh --update
+
+      - name: Trigger COPR build
+        # A pushed commit does not reach COPR by itself (this repo has no
+        # COPR webhook), so ask COPR here and fail the run when that fails.
+        if: always()
+        env:
+          COPR_WEBHOOK_URL: ${{ secrets.COPR_WEBHOOK_URL }}
+          BEFORE: ${{ steps.copr_before.outputs.head }}
+          FORCE: ${{ inputs.copr_build }}
+        run: |
+          AFTER=$(git ls-remote origin HEAD | cut -f1)
+          if [ -z "$BEFORE" ] || [ -z "$AFTER" ]; then
+            echo "ERROR: could not read the remote head (before '$BEFORE', after '$AFTER')" >&2
+            exit 1
+          fi
+          if [ "$AFTER" = "$BEFORE" ] && [ "$FORCE" != "true" ]; then
+            echo "No new commit pushed; no COPR build needed"
+            exit 0
+          fi
+          if [ -z "$COPR_WEBHOOK_URL" ]; then
+            echo "ERROR: COPR_WEBHOOK_URL secret is not set; COPR was not asked to build $AFTER" >&2
+            exit 1
+          fi
+          for pkg in php-curl-cffi; do
+            id=$(curl -fsS --retry 3 --max-time 60 -X POST "${COPR_WEBHOOK_URL%/}/$pkg/") || {
+              echo "ERROR: COPR did not accept the build request for $pkg" >&2
+              exit 1
+            }
+            echo "COPR build $id requested for $pkg"
+          done
 
       - name: Verify CI configuration
         if: always()
